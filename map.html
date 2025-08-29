@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Safe Route Finder</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0; padding: 0;
+            background: #fff;
+            color: #333;
+        }
+        h2 {
+            margin-top: 20px;
+            font-weight: 600;
+        }
+        p {
+            color: #666;
+            font-size: 14px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        .card {
+            background: #fff;
+            padding: 20px;
+            margin-top: 15px;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            box-shadow: 0px 2px 8px rgba(0,0,0,0.05);
+        }
+        #map {
+            height: 400px;
+            width: 100%;
+            border: 1px solid #ccc;
+            border-radius: 12px;
+        }
+        .form-section {
+            margin-top: 10px;
+        }
+        input {
+            padding: 10px;
+            margin: 5px;
+            width: 220px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+            transition: background 0.3s ease;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        #safety-box {
+            background: #f0f7ff;
+            color: #007bff;
+            padding: 10px;
+            border: 1px solid #bcd4ff;
+            border-radius: 8px;
+            width: 220px;
+            margin: 15px auto 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s ease;
+        }
+        #safety-box:hover {
+            background: #dcecff;
+        }
+        #details-popup {
+            display: none;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            width: 250px;
+            margin: 10px auto;
+            padding: 10px;
+            text-align: left;
+            font-size: 14px;
+            box-shadow: 0px 2px 6px rgba(0,0,0,0.1);
+        }
+        #camera-section {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        video, .camera-placeholder {
+            border: 2px solid #ccc;
+            border-radius: 12px;
+            margin-top: 10px;
+        }
+        .camera-placeholder {
+            width: 480px;
+            height: 270px;
+            margin: 0 auto;
+            background-color: black;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Safe Route Finder Demo</h2>
+        <p>Find safest routes, view live street demo, and send SOS alerts</p>
+
+        <!-- Start / Destination Form -->
+        <div class="card">
+            <div class="form-section">
+                <input type="text" id="startPoint" placeholder="Enter Start Point">
+                <input type="text" id="endPoint" placeholder="Enter Destination">
+                <button onclick="calculateRoute()">Find Route</button>
+            </div>
+        </div>
+
+        <!-- Safety Score -->
+        <div class="card">
+            <div id="safety-box" onclick="toggleSafetyDetails()">Safety Score: GOOD</div>
+            <div id="details-popup">
+                <p>Street Lights Working: Yes</p>
+                <p>Police Station Nearby: No</p>
+                <p>Shops Open: Yes</p>
+                <p>Heavy Crowds: Yes</p>
+                <p><b>Recommendation:</b> Best Route</p>
+            </div>
+        </div>
+
+        <!-- Map Section -->
+        <div class="card">
+            <div id="map"></div>
+        </div>
+
+        <!-- Camera Section -->
+        <div class="card" id="camera-section">
+            <h3>Live Street View (Demo)</h3>
+            <div class="camera-placeholder"></div>
+        </div>
+
+        <div class="card">
+            <button onclick="showLiveCamera()">Show Live Camera</button>
+            <button onclick="sendSOS()">SOS</button>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
+    <script>
+        let map;
+        let routingControl;
+
+        window.onload = function() {
+            map = L.map('map').setView([13.0827, 80.2707], 13); // Chennai center
+
+            L.tileLayer(`https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&key=YOUR_GOOGLE_MAPS_API_KEY`, {
+                attribution: '&copy; Google Maps'
+            }).addTo(map);
+        }
+
+        function calculateRoute() {
+            const start = document.getElementById('startPoint').value;
+            const end = document.getElementById('endPoint').value;
+
+            if (!start || !end) {
+                alert("Please enter both Start and Destination points.");
+                return;
+            }
+
+            if (routingControl) {
+                map.removeControl(routingControl);
+            }
+
+            // Mock route - replace with Python backend if needed
+            routingControl = L.Routing.control({
+                waypoints: [
+                    L.latLng(13.0827, 80.2707),
+                    L.latLng(13.0674, 80.2376)
+                ],
+                routeWhileDragging: false,
+                geocoder: L.Control.Geocoder.nominatim()
+            }).addTo(map);
+        }
+
+        function toggleSafetyDetails() {
+            const popup = document.getElementById('details-popup');
+            popup.style.display = (popup.style.display === 'block') ? 'none' : 'block';
+        }
+
+        function showLiveCamera() {
+            const otp = prompt("Enter Police Access OTP to view cameras:");
+            if (otp === "1234") {
+                const confirmTrack = confirm("By proceeding, you acknowledge police may track unauthorized activity. Do you agree?");
+                if (confirmTrack) {
+                    document.getElementById('camera-section').style.display = 'block';
+                }
+            } else {
+                alert("Invalid OTP. Access Denied.");
+            }
+        }
+
+        function sendSOS() {
+            alert("SOS Alert Sent!\nPolice have been notified and will contact you shortly.");
+        }
+    </script>
+</body>
+</html>
